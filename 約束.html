@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Matter.js 約束示例</title>
+    <style>
+        canvas {
+            border: 1px solid #333;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script>
+        // 初始化物理引擎
+        const Engine = Matter.Engine,
+            Render = Matter.Render,
+            Runner = Matter.Runner,
+            Bodies = Matter.Bodies,
+            Composite = Matter.Composite,
+            Constraint = Matter.Constraint,
+            MouseConstraint = Matter.MouseConstraint,
+            Mouse = Matter.Mouse;
+
+        const engine = Engine.create();
+        const world = engine.world;
+
+        // 創建渲染器 - 調整大小以適應視窗
+        const render = Render.create({
+            element: document.body,
+            engine: engine,
+            options: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                wireframes: false,
+                background: '#f0f0f0'
+            }
+        });
+
+        // 創建地板和左右牆 - 更鮮豔的顏色
+        const ground = Bodies.rectangle(
+            window.innerWidth / 2,
+            window.innerHeight - 30,
+            window.innerWidth,
+            60,
+            { 
+                isStatic: true,
+                render: { fillStyle: '#3498db' }  // 明亮的藍色
+            }
+        );
+
+        const leftWall = Bodies.rectangle(
+            30,
+            window.innerHeight / 2,
+            60,
+            window.innerHeight,
+            { 
+                isStatic: true,
+                render: { fillStyle: '#e74c3c' }  // 明亮的紅色
+            }
+        );
+
+        const rightWall = Bodies.rectangle(
+            window.innerWidth - 30,
+            window.innerHeight / 2,
+            60,
+            window.innerHeight,
+            { 
+                isStatic: true,
+                render: { fillStyle: '#2ecc71' }  // 明亮的綠色
+            }
+        );
+
+        // 彈性約束示例1：兩個方形
+        const box1 = Bodies.rectangle(300, 300, 50, 50, {
+            render: { fillStyle: '#9b59b6' }  // 紫色
+        });
+        const box2 = Bodies.rectangle(400, 300, 50, 50, {
+            render: { fillStyle: '#9b59b6' }  // 紫色
+        });
+        const springConstraint = Constraint.create({
+            bodyA: box1,
+            bodyB: box2,
+            stiffness: 0.05,
+            render: {
+                lineWidth: 5,
+                strokeStyle: '#f1c40f'  // 黃色線條
+            }
+        });
+
+        // 彈性約束示例2：圓球和固定點
+        const circle1 = Bodies.circle(200, 200, 20, {
+            render: { fillStyle: '#e67e22' }  // 橙色
+        });
+        const springConstraint2 = Constraint.create({
+            pointA: { x: 200, y: 100 },
+            bodyB: circle1,
+            stiffness: 0.05,
+            render: {
+                lineWidth: 5,
+                strokeStyle: '#1abc9c'  // 青色線條
+            }
+        });
+
+        // 剛性約束示例1：兩個圓
+        const bigCircle = Bodies.circle(500, 200, 50, {
+            render: { fillStyle: '#d35400' }  // 深橙色
+        });
+        const smallCircle = Bodies.circle(600, 200, 25, {
+            render: { fillStyle: '#d35400' }  // 深橙色
+        });
+        const stiffConstraint = Constraint.create({
+            bodyA: bigCircle,
+            bodyB: smallCircle,
+            length: 200,
+            stiffness: 1,
+            render: {
+                lineWidth: 5,
+                strokeStyle: '#8e44ad'  // 深紫色線條
+            }
+        });
+
+        // 剛性約束示例2：圓球和固定點
+        const circle2 = Bodies.circle(600, 300, 20, {
+            render: { fillStyle: '#16a085' }  // 藍綠色
+        });
+        const stiffConstraint2 = Constraint.create({
+            pointA: { x: 600, y: 200 },
+            bodyB: circle2,
+            stiffness: 1,
+            length: 100,
+            render: {
+                lineWidth: 5,
+                strokeStyle: '#c0392b'  // 深紅色線條
+            }
+        });
+
+        // 創建方塊塔 - 100個積木，使用循環漸變色
+        const generateColor = (i) => {
+            // 使用HSL顏色空間來生成漸變色
+            const hue = (i * 3.6) % 360; // 360度平均分配到100個積木
+            return `hsl(${hue}, 70%, 60%)`; // 飽和度70%，亮度60%
+        };
+
+        const stack = [];
+        for (let i = 0; i < 100; i++) {  // 增加到100個
+            stack.push(
+                Bodies.rectangle(
+                    700,                    // x位置
+                    550 - i * 6,           // y位置，縮小間距
+                    40,                     // 寬度
+                    5,                      // 高度變小，讓積木更密集
+                    {
+                        render: { 
+                            fillStyle: generateColor(i)  // 使用漸變色
+                        }
+                    }
+                )
+            );
+        }
+
+        // 添加鼠標控制
+        const mouse = Mouse.create(render.canvas);
+        const mouseConstraint = MouseConstraint.create(engine, {
+            mouse: mouse,
+            constraint: {
+                stiffness: 0.2,
+                render: {
+                    visible: false
+                }
+            }
+        });
+
+        // 將所有物體添加到世界
+        Composite.add(world, [
+            ground, leftWall, rightWall,     // 添加地板和左右牆
+            box1, box2, springConstraint,
+            circle1, springConstraint2,
+            bigCircle, smallCircle, stiffConstraint,
+            circle2, stiffConstraint2,
+            mouseConstraint,
+            ...stack
+        ]);
+
+        // 添加視窗大小變化的監聽器，更新所有邊界的位置和大小
+        window.addEventListener('resize', () => {
+            render.canvas.width = window.innerWidth;
+            render.canvas.height = window.innerHeight;
+            render.options.width = window.innerWidth;
+            render.options.height = window.innerHeight;
+            
+            // 更新地板
+            Matter.Body.setPosition(ground, {
+                x: window.innerWidth / 2,
+                y: window.innerHeight - 30
+            });
+            Matter.Body.setVertices(ground, Matter.Bodies.rectangle(
+                window.innerWidth / 2,
+                window.innerHeight - 30,
+                window.innerWidth,
+                60
+            ).vertices);
+
+            // 更新左牆
+            Matter.Body.setPosition(leftWall, {
+                x: 30,
+                y: window.innerHeight / 2
+            });
+            Matter.Body.setVertices(leftWall, Matter.Bodies.rectangle(
+                30,
+                window.innerHeight / 2,
+                60,
+                window.innerHeight
+            ).vertices);
+
+            // 更新右牆
+            Matter.Body.setPosition(rightWall, {
+                x: window.innerWidth - 30,
+                y: window.innerHeight / 2
+            });
+            Matter.Body.setVertices(rightWall, Matter.Bodies.rectangle(
+                window.innerWidth - 30,
+                window.innerHeight / 2,
+                60,
+                window.innerHeight
+            ).vertices);
+        });
+
+        // 運行引擎
+        Render.run(render);
+        const runner = Runner.create();
+        Runner.run(runner, engine);
+    </script>
+</body>
+</html>

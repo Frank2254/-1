@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Matter.js 物理引擎演示</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        #info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial;
+            font-size: 16px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .animal-name {
+            position: absolute;
+            color: white;
+            font-family: Arial;
+            font-size: 14px;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px black;
+            animation: fadeOut 1s forwards;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="info">物體數量: 0 | FPS: 0</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script>
+        const Engine = Matter.Engine,
+            Render = Matter.Render,
+            Runner = Matter.Runner,
+            Bodies = Matter.Bodies,
+            Composite = Matter.Composite,
+            Mouse = Matter.Mouse,
+            Events = Matter.Events;
+
+        // 創建引擎
+        const engine = Engine.create();
+        const world = engine.world;
+
+        // 創建渲染器
+        const render = Render.create({
+            element: document.body,
+            engine: engine,
+            options: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                wireframes: false
+            }
+        });
+
+        // 啟動渲染器
+        Render.run(render);
+        const runner = Runner.create();
+        Runner.run(runner, engine);
+
+        // 創建邊界
+        const walls = [
+            Bodies.rectangle(window.innerWidth/2, 0, window.innerWidth, 60, { isStatic: true }),
+            Bodies.rectangle(window.innerWidth/2, window.innerHeight, window.innerWidth, 60, { isStatic: true }),
+            Bodies.rectangle(0, window.innerHeight/2, 60, window.innerHeight, { isStatic: true }),
+            Bodies.rectangle(window.innerWidth, window.innerHeight/2, 60, window.innerHeight, { isStatic: true })
+        ];
+        Composite.add(world, walls);
+
+        // 變量初始化
+        let bodies = [];
+        let lastTime = performance.now();
+        let frames = 0;
+        let fps = 0;
+        let isAutoSpawning = true;  // 新增：控制自動生成的開關
+        let lastSpawnTime = 0;      // 新增：記錄上次生成時間
+        const spawnInterval = 0.000000000001;   // 新增：生成間隔（毫秒）
+
+        // 創建物體函數
+        function createRandomBody(x, y) {
+            const size = Math.random() * 30 + 20;
+            const animals = [
+                {
+                    name: "小狗",
+                    vertices: [
+                        { x: -size/2, y: size/2 },    // 身體
+                        { x: size/2, y: size/2 },
+                        { x: size/2, y: -size/2 },
+                        { x: -size/2, y: -size/2 },
+                        { x: -size/3, y: -size*0.7 },  // 耳朵
+                        { x: -size/6, y: -size*0.9 },
+                        { x: size/6, y: -size*0.9 },
+                        { x: size/3, y: -size*0.7 }
+                    ]
+                },
+                {
+                    name: "兔子",
+                    vertices: [
+                        { x: -size/2, y: size/2 },    // 身體
+                        { x: size/2, y: size/2 },
+                        { x: size/2, y: -size/2 },
+                        { x: -size/2, y: -size/2 },
+                        { x: -size/4, y: -size*0.8 },  // 耳朵
+                        { x: 0, y: -size },
+                        { x: size/4, y: -size*0.8 }
+                    ]
+                },
+                {
+                    name: "貓咪",
+                    vertices: [
+                        { x: -size/2, y: size/2 },    // 身體
+                        { x: size/2, y: size/2 },
+                        { x: size/2, y: -size/2 },
+                        { x: 0, y: -size*0.7 },       // 尖耳朵
+                        { x: -size/2, y: -size/2 }
+                    ]
+                },
+                {
+                    name: "小鳥",
+                    vertices: [
+                        { x: -size/2, y: 0 },         // 身體
+                        { x: 0, y: size/2 },
+                        { x: size/2, y: 0 },
+                        { x: 0, y: -size/2 }
+                    ]
+                },
+                {
+                    name: "魚兒",
+                    vertices: [
+                        { x: -size/2, y: 0 },         // 魚身
+                        { x: 0, y: size/3 },
+                        { x: size/2, y: 0 },
+                        { x: 0, y: -size/3 }
+                    ]
+                },
+                {
+                    name: "小豬",
+                    vertices: [
+                        { x: -size/2, y: size/3 },    // 身體
+                        { x: size/2, y: size/3 },
+                        { x: size/2, y: -size/3 },
+                        { x: -size/2, y: -size/3 },
+                        { x: -size/4, y: -size/2 },   // 耳朵
+                        { x: 0, y: -size/2 },
+                        { x: size/4, y: -size/2 }
+                    ]
+                }
+            ];
+
+            const animal = animals[Math.floor(Math.random() * animals.length)];
+            const body = Bodies.fromVertices(x, y, [animal.vertices], {
+                render: {
+                    fillStyle: `hsl(${(performance.now() / 20) % 360}, 80%, 50%)`
+                }
+            });
+            
+            // 顯示動物名稱
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'animal-name';
+            nameDiv.style.left = `${x}px`;
+            nameDiv.style.top = `${y}px`;
+            nameDiv.textContent = animal.name;
+            document.body.appendChild(nameDiv);
+            
+            // 1秒後移除名稱標籤
+            setTimeout(() => {
+                nameDiv.remove();
+            }, 1000);
+
+            bodies.push(body);
+            Composite.add(world, body);
+        }
+
+        // 新增：自動生成函數
+        function autoSpawn() {
+            if (!isAutoSpawning) return;
+            
+            const currentTime = performance.now();
+            if (currentTime - lastSpawnTime >= spawnInterval) {
+                const x = Math.random() * (window.innerWidth - 100) + 50;  // 避免太靠近邊緣
+                const y = Math.random() * (window.innerHeight - 100) + 50;
+                createRandomBody(x, y);
+                lastSpawnTime = currentTime;
+            }
+            requestAnimationFrame(autoSpawn);
+        }
+
+        // 修改空白鍵事件，增加暫停/繼續功能
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if (e.shiftKey) {  // Shift + 空白鍵：清除所有物體
+                    bodies.forEach(body => Composite.remove(world, body));
+                    bodies = [];
+                } else {  // 單獨空白鍵：暫停/繼續
+                    isAutoSpawning = !isAutoSpawning;
+                    if (isAutoSpawning) {
+                        autoSpawn();
+                    }
+                }
+            }
+        });
+
+        // 更新信息顯示
+        function updateInfo() {
+            frames++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                fps = frames;
+                frames = 0;
+                lastTime = now;
+            }
+            document.getElementById('info').textContent = 
+                `物體數量: ${bodies.length} | FPS: ${fps}`;
+            requestAnimationFrame(updateInfo);
+        }
+
+        updateInfo();
+
+        // 在最後啟動自動生成
+        autoSpawn();
+    </script>
+</body>
+</html>

@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>地球、月相與星空</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0a0a2a;
+            cursor: none;
+            transition: background-color 3s ease;
+        }
+
+        .star {
+            position: absolute;
+            pointer-events: none;
+            transition: opacity 1s, color 2s;
+        }
+
+        #earth {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 300px;
+            pointer-events: none;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            z-index: 1;
+            transition: filter 0.5s, text-shadow 0.5s;
+        }
+
+        #moon {
+            position: fixed;
+            width: 200px;
+            height: 200px;
+            pointer-events: none;
+            transition: transform 0.1s ease-out, z-index 0.1s, filter 0.5s;
+            background-image: url('./image/station.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        /* 新增提示文字樣式 */
+        #musicPrompt {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 16px;
+            text-align: center;
+            opacity: 0.8;
+            z-index: 3;
+        }
+
+        /* 添加流星樣式 */
+        .meteor {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: linear-gradient(to right, white, transparent);
+            border-radius: 50%;
+            transform: rotate(-45deg);
+            pointer-events: none;
+            filter: blur(1px);
+        }
+
+        .meteor::before {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(to right, white, transparent);
+            transform: translateX(-100%);
+        }
+    </style>
+</head>
+<body>
+    <div id="earth">🌍</div>
+    <div id="moon"></div>
+    <!-- 新增音樂元素和提示文字 -->
+    <audio id="bgMusic" loop>
+        <source src="./music/아파트 게임.mp3" type="audio/mp3">
+    </audio>
+    <div id="musicPrompt">點擊畫面播放音樂</div>
+
+<script>
+    // 定義一些漂亮的顏色
+    const colors = [
+        '#ff6b6b', // 紅
+        '#4ecdc4', // 青
+        '#45b7d1', // 藍
+        '#96ceb4', // 綠
+        '#ffeead', // 黃
+        '#ff9999', // 粉
+        '#87ceeb', // 天藍
+        '#dda0dd', // 紫
+        '#90ee90', // 淺綠
+        '#ffd700'  // 金
+    ];
+
+    function getRandomColor() {
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    // 修改創建星星的函數
+    function createStar() {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = Math.random() * window.innerWidth + 'px';
+        star.style.top = Math.random() * window.innerHeight + 'px';
+        star.style.fontSize = Math.random() * 8 + 4 + 'px';
+        star.textContent = '✦';
+        star.style.opacity = Math.random() * 0.7 + 0.3;
+        star.style.color = getRandomColor();
+        
+        // 添加彩色發光效果
+        const color = getRandomColor();
+        star.style.textShadow = `0 0 5px ${color},
+                                0 0 10px ${color},
+                                0 0 15px ${color}`;
+        
+        document.body.appendChild(star);
+        return star;
+    }
+
+    // 修改星星閃爍效果，加入顏色變化
+    function twinkleStar(star) {
+        // 閃爍效果
+        setInterval(() => {
+            star.style.opacity = Math.random() * 0.7 + 0.3;
+        }, Math.random() * 3000 + 1000);
+
+        // 顏色變化效果
+        setInterval(() => {
+            const color = getRandomColor();
+            star.style.color = color;
+            star.style.textShadow = `0 0 5px ${color},
+                                    0 0 10px ${color},
+                                    0 0 15px ${color}`;
+        }, Math.random() * 5000 + 3000);
+    }
+
+    // 定義地球的顏色效果
+    const earthFilters = [
+        'hue-rotate(0deg) brightness(1)',      // 原色
+        'hue-rotate(120deg) brightness(1.2)',  // 綠色調
+        'hue-rotate(240deg) brightness(1.1)'   // 藍色調
+    ];
+
+    // 地球動畫
+    const earthPhases = ['🌍', '🌎', '🌏'];
+    let currentEarthPhase = 0;
+    const earth = document.getElementById('earth');
+
+    function updateEarthColor() {
+        const filter = earthFilters[currentEarthPhase];
+        earth.style.filter = filter;
+        
+        // 根據當前濾鏡計算對應的發光顏色
+        const hue = (currentEarthPhase * 120) % 360; // 120度間隔的色相
+        const glowColor = `hsl(${hue}, 100%, 70%)`;
+        
+        earth.style.textShadow = `
+            0 0 20px ${glowColor}88,
+            0 0 40px ${glowColor}66,
+            0 0 60px ${glowColor}44,
+            0 0 80px ${glowColor}22
+        `;
+    }
+
+    setInterval(() => {
+        currentEarthPhase = (currentEarthPhase + 1) % earthPhases.length;
+        earth.textContent = earthPhases[currentEarthPhase];
+        updateEarthColor();
+    }, 1000);
+
+    // 定義月亮的顏色效果
+    const moonFilters = [
+        'hue-rotate(0deg) brightness(1) saturate(1.5)',     // 原色
+        'hue-rotate(60deg) brightness(1.3) saturate(1.8)',  // 黃色調
+        'hue-rotate(120deg) brightness(1.4) saturate(1.8)', // 綠色調
+        'hue-rotate(180deg) brightness(1.3) saturate(1.8)', // 青色調
+        'hue-rotate(240deg) brightness(1.2) saturate(1.8)', // 藍色調
+        'hue-rotate(300deg) brightness(1.3) saturate(1.8)', // 紫色調
+        'hue-rotate(330deg) brightness(1.4) saturate(1.8)', // 粉色調
+        'hue-rotate(30deg) brightness(1.5) saturate(1.8)'   // 橙色調
+    ];
+
+    // 月相動畫
+    // const moonPhases = ['🌕', '🌕', '🌕', '🌕', '🌕', '🌕', '🌕', '🌕'];  // 使用滿月來展示顏色
+    let currentPhase = 0;
+    const moon = document.getElementById('moon');
+    let lastX = 0;
+
+    function updateMoonColor() {
+        const filter = moonFilters[currentPhase];
+        moon.style.filter = filter + ' drop-shadow(0 0 15px rgba(255,255,255,0.6))';
+    }
+
+    setInterval(() => {
+        currentPhase = (currentPhase + 1) % moonFilters.length;
+        updateMoonColor();
+    }, 200);
+
+    // 修改月球（太空站）動畫相關代碼
+    let angle = 0;
+    const radius = 200; // 旋轉半徑
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    
+    function updateStationPosition() {
+        // 計算太空站位置
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+        
+        // 更新太空站位置
+        moon.style.left = (x - 100) + 'px';
+        moon.style.top = (y - 100) + 'px';
+        
+        // 調整層級（當太空站在地球後面時）
+        moon.style.zIndex = Math.sin(angle) < 0 ? 0 : 2;
+        
+        // 更新角度
+        angle += 0.02; // 控制旋轉速度
+    }
+
+    // 添加動畫循環
+    function animate() {
+        updateStationPosition();
+        requestAnimationFrame(animate);
+    }
+
+    // 開始動畫
+    animate();
+
+    // 視窗大小改變時更新中心點
+    window.addEventListener('resize', () => {
+        centerX = window.innerWidth / 2;
+        centerY = window.innerHeight / 2;
+    });
+
+    // 初始化星空
+    for (let i = 0; i < 150; i++) {
+        const star = createStar();
+        twinkleStar(star);
+    }
+
+    // 視窗調整大小時重新創建星星
+    window.addEventListener('resize', () => {
+        const stars = document.querySelectorAll('.star');
+        stars.forEach(star => star.remove());
+        for (let i = 0; i < 150; i++) {
+            const star = createStar();
+            twinkleStar(star);
+        }
+    });
+
+    // 新增音樂控制相關代碼
+    const bgMusic = document.getElementById('bgMusic');
+    const musicPrompt = document.getElementById('musicPrompt');
+    let isMusicStarted = false;
+
+    document.addEventListener('click', () => {
+        if (!isMusicStarted) {
+            bgMusic.play();
+            isMusicStarted = true;
+            musicPrompt.style.display = 'none';
+        }
+    });
+
+    // 修改背景顏色變化效果，使用更明亮的顏色
+    const backgroundColors = [
+        '#1e3799', // 亮藍色
+        '#4834d4', // 紫色
+        '#686de0', // 淺紫色
+        '#be2edd', // 粉紫色
+        '#4bcffa', // 天藍色
+        '#45aaf2', // 湖藍色
+        '#2ecc71', // 翠綠色
+        '#3498db', // 寶藍色
+        '#9b59b6', // 淺紫色
+        '#f1c40f'  // 金黃色
+    ];
+
+    let currentBgIndex = 0;
+    
+    // 背景顏色變化，調整時間間隔為3秒
+    setInterval(() => {
+        document.body.style.backgroundColor = backgroundColors[currentBgIndex];
+        currentBgIndex = (currentBgIndex + 1) % backgroundColors.length;
+    }, 1000);  // 每3秒變換一次顏色
+
+    // 添加流星效果
+    function createMeteor() {
+        const meteor = document.createElement('div');
+        meteor.className = 'meteor';
+        
+        // 隨機起始位置（從螢幕上方或右側開始）
+        const startFromTop = Math.random() > 0.5;
+        const x = startFromTop ? Math.random() * window.innerWidth : window.innerWidth;
+        const y = startFromTop ? -10 : Math.random() * window.innerHeight;
+        
+        meteor.style.left = x + 'px';
+        meteor.style.top = y + 'px';
+        
+        // 隨機大小
+        const scale = Math.random() * 0.5 + 0.5;
+        meteor.style.transform = `rotate(-45deg) scale(${scale})`;
+        
+        document.body.appendChild(meteor);
+        
+        // 流星動畫
+        const angle = -45; // 流星角度
+        const speed = Math.random() * 200 + 100; // 隨機速度
+        let currentX = x;
+        let currentY = y;
+        
+        function animateMeteor() {
+            currentX -= Math.cos(angle * Math.PI / 180) * speed / 60;
+            currentY += Math.sin(-angle * Math.PI / 180) * speed / 60;
+            
+            meteor.style.left = currentX + 'px';
+            meteor.style.top = currentY + 'px';
+            
+            // 當流星離開螢幕時移除
+            if (currentX < -200 || currentY > window.innerHeight + 200) {
+                meteor.remove();
+            } else {
+                requestAnimationFrame(animateMeteor);
+            }
+        }
+        
+        animateMeteor();
+    }
+
+    // 定期產生流星
+    function generateMeteors() {
+        if (Math.random() < 0.3) { // 30%機率產生流星
+            createMeteor();
+        }
+        setTimeout(generateMeteors, Math.random() * 2000 + 1000); // 1-3秒間隔
+    }
+
+    // 開始產生流星
+    generateMeteors();
+
+    // 在視窗大小改變時的處理中添加流星重置
+    window.addEventListener('resize', () => {
+        // ... existing resize code ...
+        
+        // 移除所有現有流星
+        const meteors = document.querySelectorAll('.meteor');
+        meteors.forEach(meteor => meteor.remove());
+    });
+</script>
+</body>
+</html> 
